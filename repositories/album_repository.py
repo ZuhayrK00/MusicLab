@@ -1,61 +1,65 @@
-import pdb
 from db.run_sql import run_sql
+import pdb
 from models.album import Album
 import repositories.artist_repository as artist_repository
+
+# title, genre, artist, id=None
+def save(album):
+    # pdb.set_trace()
+    sql = 'INSERT INTO albums (title, genre, artist_id) VALUES (%s, %s, %s) RETURNING *'
+    values = [album.title, album.genre, album.artist.id]
+    results = run_sql(sql, values)
+    id = results[0]['id']
+    album.id = id 
+    return album
 
 def select_all():
     albums = []
 
-    sql = "SELECT * FROM album"
-    result = run_sql(sql)
+    sql = "SELECT * FROM albums"
+    results = run_sql(sql)
 
-    for row in result:
-        artist = artist_repository.select(row[artist.id])
-        album = Album(
-            row['title'],
-            artist,
-            row['genre'],
-            row['id'],
-        )
+    for row in results:
+        artist = artist_repository.select(row['artist_id'])
+        album = Album(row["title"], row["genre"], artist, row['id'])
         albums.append(album)
     return albums
 
-def select_by_id(id):
+def select(id):
     album = None
-    sql = "SELECT * FROM album WHERE id = %s"
+    sql = "SELECT * FROM albums WHERE id = %s"
     values = [id]
-    result = run_sql(sql, values)
+    results = run_sql(sql, values)
 
-    if result is not None:
-        artist = artist_repository.select(result[artist.id])
-        album = Album(
-            result['title'],
-            artist,
-            result['genre'],
-            result['id'],
-        )
-    return album
-
-def save(album):
-    sql = "INSERT INTO album (title, artist_id, genre) VALUES (%s, %s, %s) RETURNING *"
-    values = [album.title, album.artist.id, album.genre]
-    result = run_sql(sql, values)
-    id = result[0]['id']
-    album.id = id
+    if results:
+        result = results[0]
+        artist = artist_repository.select(result['artist_id'])
+        album = Album(result["title"], result["genre"], artist)
     return album
 
 def delete_all():
-    sql = "DELETE FROM album"
+    sql = "DELETE FROM albums"
     run_sql(sql)
 
-def delete(album):
-    sql = "DELETE FROM album WHERE id = %s"
-    values = [id]
-    run_sql(sql, values)
+def find_albums_by_artist(artist):
+    artist_albums = []
+    sql = "SELECT * FROM albums WHERE artist_id = %s"
+    values = [artist.id]
+
+    results = run_sql(sql, values)
+    if results:
+        for row in results:
+            album = Album(row["title"], row["genre"], row["artist_id"], row["id"])
+            artist_albums.append(album)
+    return artist_albums
 
 def update(album):
-    sql = "UPDATE album SET (title, artist_id, genre) = (%s, %s, %s) WHERE id = %s"
-    values = [album.title, album.artist.id, album.genre, album.id]
+    sql = 'UPDATE albums SET (title, genre, artist_id) = ROW(%s, %s, %s) WHERE id = %s'
+    values = [album.title, album.genre, album.artist.id, album.id]
     run_sql(sql, values)
-    
 
+def delete(id):
+    # pdb.set_trace()
+    sql = "DELETE FROM albums WHERE id = %s"
+    values = [id]
+    run_sql(sql, values)
